@@ -1,0 +1,13 @@
+release/
+debug/
+box/
+pics/
+videoSrc/
+*.pdf
+*.py
+*.jpg
+*.npz
+Makefile
+*.Debug
+*.Release
+*.stash
