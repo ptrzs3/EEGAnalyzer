@@ -90,6 +90,8 @@ void DynPlot::initPlots()
 
 void DynPlot::updateRawWave(int rawData)
 {
+    if(!canDraw)
+        return;
     QDateTime t = QDateTime::currentDateTime();
     double d = t.toSecsSinceEpoch();
     d += t.toMSecsSinceEpoch() % 1000 / 1000.0;
@@ -108,7 +110,11 @@ void DynPlot::updateRawWave(int rawData)
     }
     rawWavePlot->replot();
 }
-
+void DynPlot::updateTimeOnce()
+{
+    now_ = QDateTime::currentDateTime().toTime_t() - 2;
+    updateAxisX();
+}
 void DynPlot::updateAxisX()
 {
     now_+= 2;
@@ -118,6 +124,8 @@ void DynPlot::updateAxisX()
 
 void DynPlot::updateWave(LargePackage largePackage)
 {
+    if(!canDraw)
+        return;
     double x = QDateTime::currentDateTime().toTime_t();
     xWaveData.push_back(x);
 

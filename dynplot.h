@@ -55,11 +55,11 @@ public:
     QPushButton *analyze;
     QPushButton *faceRecognize;
     QWidget *widget;
-
+    bool canDraw = false;
+    void updateTimeOnce();
 
 private:
     void initUi();
-
     QwtPlot *rawWavePlot;
     QwtPlot *AMWavePlot;
 
@@ -94,7 +94,6 @@ private:
 
     QVBoxLayout *vLayout;
     QHBoxLayout *hLayout;
-
 
 public slots:
     void updateRawWave(int);

@@ -20,6 +20,7 @@ Manager::Manager()
     connect(dynplot->analyze, &QPushButton::clicked, this, &Manager::analyzeInterset);
     connect(dynplot->faceRecognize, &QPushButton::clicked, this, &Manager::faceRecognize);
     connect(dynplot->quit, &QPushButton::clicked, this, [=]{
+        playing = false;
         if(eegDatabase != nullptr)
             eegDatabase->close();
         dynplot->close();
@@ -60,7 +61,6 @@ void Manager::playVideo()
     playing = videoPlayer->play(videoTypeList[x].filePath());
     dynplot->loadVideo->setEnabled(!playing);
     dynplot->analyze->setEnabled(!playing);
-//    playing = true;
 }
 
 void Manager::videoFinish()
@@ -70,6 +70,7 @@ void Manager::videoFinish()
         videoPlayer->hide();
         playing = false;
         dynplot->loadVideo->setEnabled(!playing);
+        dynplot->analyze->setEnabled(!playing);
         QMessageBox:: StandardButton result = QMessageBox::information(dynplot->widget,
                                  "EEG Analyzer",
                                  "continue or not",
@@ -210,6 +211,8 @@ bool Manager::faceRecognize()
             eegDatabase = new Database(this->username);
         }
         getVideoTypes();
+        dynplot->updateTimeOnce();
+        dynplot->canDraw = true;
         return true;
     }
 }
