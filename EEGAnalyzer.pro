@@ -26,12 +26,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 CONFIG += c++11
-
 DEFINES += QT_DLL QWT_DLL
 
-#LIBS += -L"C:\Qt\Qt5.12.2\5.12.2\mingw73_32\lib" -lqwtd
+CONFIG += debug_and_release
+CONFIG(debug, debug|release) {
+    LIBS += -L"C:\Qt\Qt5.12.2\5.12.2\mingw73_32\lib" -lqwtd
+} else {
+    LIBS += -L"C:\Qt\Qt5.12.2\5.12.2\mingw73_32\lib" -lqwt
+}
 
-LIBS += -L"C:\Qt\Qt5.12.2\5.12.2\mingw73_32\lib" -lqwt
 
 INCLUDEPATH += C:\Qt\Qt5.12.2\5.12.2\mingw73_32\include\Qwt
 RC_ICONS=brain.ico

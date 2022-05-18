@@ -54,6 +54,7 @@ public:
     QPushButton *quit;
     QPushButton *analyze;
     QPushButton *faceRecognize;
+    QPushButton *videoCrawler;
     QWidget *widget;
     bool canDraw = false;
     void updateTimeOnce();

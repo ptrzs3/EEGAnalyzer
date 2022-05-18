@@ -6,6 +6,7 @@
 #include <QSqlError>
 #include <QFileInfo>
 #include <QDir>
+#include <QProcess>
 #include "identifiers.h"
 class Database
 {

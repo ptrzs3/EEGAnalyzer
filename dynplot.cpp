@@ -21,10 +21,12 @@ void DynPlot::initUi()
     loadVideo = new QPushButton("Start");
     analyze = new QPushButton("Analyze");
     faceRecognize = new QPushButton("Face Recognize");
+    videoCrawler = new QPushButton("Collect videos");
     quit = new QPushButton("Exit");
     hLayout->addWidget(loadVideo);
     hLayout->addWidget(analyze);
     hLayout->addWidget(faceRecognize);
+    hLayout->addWidget(videoCrawler);
     hLayout->addWidget(quit);
     hLayout->setSpacing(100);
     hLayout->setContentsMargins(150,0,150,0);

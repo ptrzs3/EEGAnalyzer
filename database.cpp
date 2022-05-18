@@ -51,7 +51,7 @@ void Database::createVideoTable()
     QString cmd = QString("CREATE TABLE IF NOT EXISTS VideoType"
                           "(videoType text UNIQUE);");
     exec(cmd);
-    updateVideoTable();
+//    updateVideoTable();
 }
 void Database::updateVideoTable()
 {
@@ -98,4 +98,8 @@ void Database::databaseBackup()
     // 备份数据库文件
     // 可以使用sqlite3.exe备份sql文件，或者直接复制db文件
     // 建议直接复制db文件，命名为*.dbbkp
+    QProcess s;
+    s.start("copy EEG.db EEG.dbbkp");
+    s.waitForStarted();
+
 }

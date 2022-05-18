@@ -15,10 +15,23 @@ Manager::Manager()
     connect(tgam, &TGAMParser::smallPackageReady, dynplot, &DynPlot::updateRawWave);
     connect(tgam, &TGAMParser::largePackageReady, dynplot, &DynPlot::updateWave);
     connect(dynplot->loadVideo, &QPushButton::clicked, this, &Manager::useSuggestion);
-    dynplot->loadVideo->setEnabled(!this->username.isEmpty());
+    dynplot->loadVideo->setEnabled(false);
+    dynplot->analyze->setEnabled(false);
     connect(dynplot, &DynPlot::replotFinish, this, &Manager::saveEEGData);
     connect(dynplot->analyze, &QPushButton::clicked, this, &Manager::analyzeInterset);
-    connect(dynplot->faceRecognize, &QPushButton::clicked, this, &Manager::faceRecognize);
+    connect(dynplot->faceRecognize, &QPushButton::clicked, this, [=]{
+        // 人脸识别通过并且该用户数据库积累了6*60*60条数据
+        // 询问是否进行兴趣分析
+        if(faceRecognize() && getTotalNumberOfRecords() >= 6*60*60) {
+            if(QMessageBox::information(dynplot->widget,
+                                     "EEG Analyzer",
+                                     "sufficient amount of data, do you want to analysis?",
+                                        "Yes", "No")==0){
+                analyzeInterset();
+            }
+        }
+    });
+    connect(dynplot->videoCrawler, &QPushButton::clicked, this, &Manager::startCrawler);
     connect(dynplot->quit, &QPushButton::clicked, this, [=]{
         playing = false;
         if(eegDatabase != nullptr)
@@ -30,6 +43,7 @@ Manager::Manager()
     });
     videoSrc = QDir::currentPath() + "/videoSrc";
     fileFilter<<"*.mp4"<<"*.mkv";
+
 }
 
 void Manager::playVideo()
@@ -204,13 +218,14 @@ bool Manager::faceRecognize()
     } else {
         this->username = ret;
         dynplot->loadVideo->setEnabled(!this->username.isEmpty());
+        dynplot->analyze->setEnabled(!this->username.isEmpty());
         dynplot->faceRecognize->setEnabled(this->username.isEmpty());
         // 通过人脸识别后才将数据库实例化，并传过去用户名，比如：User_cgj
         // 将以用户名创建数据库表
         if(eegDatabase == nullptr) {
             eegDatabase = new Database(this->username);
         }
-        getVideoTypes();
+//        updateVideoTypeList();
         dynplot->updateTimeOnce();
         dynplot->canDraw = true;
         return true;
@@ -270,7 +285,22 @@ bool Manager::faceRegistration()
         return false;
     }
 }
-
+void Manager::startCrawler()
+{
+    bool isOk;
+    QProcess w;
+    QString vType = QInputDialog::getText(dynplot->widget,
+                                          "EEG Anaylyzer",
+                                          "Input video type you want",
+                                          QLineEdit::Normal,
+                                          "Example: basketball",
+                                          &isOk);
+    if(isOk) {
+        QString processLocation = QDir::currentPath() + "/Scripts/bili_search.exe";
+        ShellExecuteA(NULL, NULL, (LPCSTR)processLocation.toLocal8Bit(),
+                      (LPCSTR)vType.toLocal8Bit(), NULL, SW_SHOW);
+    }
+}
 QString Manager::usernameCheck(QString src)
 {
     QString prefix = "User_";
@@ -280,30 +310,20 @@ QString Manager::usernameCheck(QString src)
     return prefix + dst;
 }
 
-bool Manager::getTotalNumberOfRecords()
+int Manager::getTotalNumberOfRecords()
 {
     QString cmd = QString("select count(*) from %1;").arg(username);
     QSqlQuery query(*eegDatabase->db);
     query.exec(cmd);
     query.next();
     int count = query.value(0).toInt();
-    if(count < 6*60*60){
-        if(QMessageBox::information(dynplot->widget,
-                                 "EEG Analyzer",
-                                 "Insufficient amount of data, whether to continue the analysis",
-                                    "Yes", "No")==0){
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        return true;
-    }
+    return count;
 }
-void Manager::getVideoTypes()
+void Manager::updateVideoTypeList()
 {
     QString cmd =  "select videoType from VideoType;";
     QSqlQuery query(*eegDatabase->db);
+    videoTypeList.clear();
     if(query.exec(cmd)){
         while(query.next()){
             videoTypeList<<query.value(0).toString();
@@ -317,6 +337,7 @@ void Manager::getVideoTypes()
 }
 void Manager::analyzeResultInitialization()
 {
+    analyzeResult.clear();
     foreach(QString t, videoTypeList) {
         analyzeResult.insert(t, 0);
     }
@@ -324,27 +345,28 @@ void Manager::analyzeResultInitialization()
 void Manager::analyzeInterset()
 {
     QString name_t;
-    if(username.isEmpty()){
-        bool isOK;
-        QString t = QInputDialog::getText(dynplot->widget,
-                                          "EEG Analyzer",
-                                          "Input username",
-                                          QLineEdit::Normal,
-                                          "example: cgj",
-                                          &isOK);
-        if(isOK){
-            name_t = "User_" + t;
-            eegDatabase = new Database(name_t);
-            getVideoTypes();
-//            name_t = t;
-        } else {
-            return;
-        }
-    } else {
-        name_t = username;
-    }
+//    // 没有经过人脸识别
+//    if(username.isEmpty()){
+//        bool isOK;
+//        QString t = QInputDialog::getText(dynplot->widget,
+//                                          "EEG Analyzer",
+//                                          "Input username",
+//                                          QLineEdit::Normal,
+//                                          "example: cgj",
+//                                          &isOK);
+//        if(isOK){
+//            name_t = "User_" + t;
+//            eegDatabase = new Database(name_t);
+//        } else {
+//            return;
+//        }
+//    } else {
+//        name_t = username;
+//    }
+    name_t = username;
     QSqlQuery query(*eegDatabase->db);
     QString cmd;
+    // 检索是否有此用户
     cmd = QString("select count(*) from sqlite_master where type='table' and name='%1';")
             .arg(name_t);
     query.clear();
@@ -356,10 +378,25 @@ void Manager::analyzeInterset()
                              "No record for this user, please check your input");
         return;
     }
-    if(!getTotalNumberOfRecords())
-        return;
+    // 查询该用户有效脑电波记录数
+    // 不足6*60*60条数据，确认是否仍然要进行兴趣分析
+    if(getTotalNumberOfRecords() < 6*60*60) {
+        if(QMessageBox::information(dynplot->widget,
+                                 "EEG Analyzer",
+                                 "Insufficient amount of data, whether to continue the analysis",
+                                    "Yes", "No")!=0){
+            // 不分析
+            return;
+        }
+    }
+    // 每次分析都更新视频类型表，因为有可能在本次使用中爬取视频
+    // 用户观看该类视频，但是视频类型数据库没有更新
+    eegDatabase->updateVideoTable();
+    // 更新视频类型列表
+    updateVideoTypeList();
     if(videoTypeList.isEmpty())
         return;
+    // 分析结果初始化
     analyzeResultInitialization();
     foreach(QString t, videoTypeList)
     {

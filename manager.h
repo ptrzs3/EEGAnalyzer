@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <QInputDialog>
 #include <QRegExp>
+#include <QProcess>
 #include "staplot.h"
 #include "database.h"
 #include "dynplot.h"
@@ -29,11 +30,11 @@ private:
     void useSuggestion();
     QFileInfoList removeEmptyFolder(QFileInfoList);
     QString username;
-    bool getTotalNumberOfRecords();
+    int getTotalNumberOfRecords();
     QHash<QString, double> analyzeResult;
     void analyzeResultInitialization();
     QStringList videoTypeList;
-    void getVideoTypes();
+    void updateVideoTypeList();
     wchar_t* QString2wchat_t(QString);
 
 private slots:
@@ -45,6 +46,7 @@ private slots:
     bool faceRegistration();
     QString usernameCheck(QString);
     void analyzeInterset();
+    void startCrawler();
 };
 
 #endif // MANAGER_H
